@@ -68,17 +68,41 @@ def data_statistics(housing_data_frame):
 def split_train_test(housing_data, test_ratio):
     np.random.seed(42)
     # 随机抽样
+    '''
     shuffled_indices = np.random.permutation(len(housing_data))
     test_set_size = int(len(housing_data) * test_ratio)
     test_indices = shuffled_indices[:test_set_size]
     train_indices = shuffled_indices[test_set_size:]
+    
+    return housing_data.iloc[train_indices], housing_data.iloc[test_indices]
+    '''
 
     # 分层抽样
-    for each in housing_data["tradeTime"].value_counts().value:
+    # 根据tradeTime分层抽样
+    # 未完
+
+    for i, v in zip(housing_data["tradeTime"].value_counts().index, housing_data["tradeTime"].value_counts().values):
+        if v < 100:
+            housing_data.drop(housing_data.where(housing_data["tradeTime"] == i), axis=1)
+
+    housing_data.sort_values(by="tradeTime", inplace=True)
+
+    classified_samples = {}
+    test, train = pd.DataFrame()
+    for year in housing_data["tradeTime"].value_counts().index:
+        classified_samples.setdefault(year, housing_data.where(housing_data["tradeTime"] == year))
+        shuffled_indices = np.random.permutation(len(classified_samples[year]))
+        test_set_size = int(len(classified_samples[year] * test_ratio))
+        test_indices = shuffled_indices[:test_set_size]
+        train_indices = shuffled_indices[test_set_size:]
+        test.append(housing_data.iloc[test_indices])
+        train.append(housing_data.iloc[train_indices])
+
+    return test, train
 
 
 
-    return housing_data.iloc[train_indices], housing_data.iloc[test_indices]
+
 
 
 def train_test_prep(housing_data, test_ratio):
