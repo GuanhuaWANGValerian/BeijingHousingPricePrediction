@@ -1,8 +1,15 @@
 import os
 import pandas as pd
+from pandas.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
 
 '''
 url: the url which fetches the data
@@ -77,39 +84,88 @@ def split_train_test(housing_data, test_ratio):
     return housing_data.iloc[train_indices], housing_data.iloc[test_indices]
     '''
 
-    # 分层抽样
     # 根据tradeTime分层抽样
-    # 未完
-
-    for i, v in zip(housing_data["tradeTime"].value_counts().index, housing_data["tradeTime"].value_counts().values):
-        if v < 100:
-            housing_data.drop(housing_data.where(housing_data["tradeTime"] == i), axis=1)
-
     housing_data.sort_values(by="tradeTime", inplace=True)
 
     classified_samples = {}
-    test, train = pd.DataFrame()
+    test = pd.DataFrame()
+    train = pd.DataFrame()
     for year in housing_data["tradeTime"].value_counts().index:
-        classified_samples.setdefault(year, housing_data.where(housing_data["tradeTime"] == year))
+        classified_samples.setdefault(year, housing_data.loc[housing_data["tradeTime"] == year])
         shuffled_indices = np.random.permutation(len(classified_samples[year]))
-        test_set_size = int(len(classified_samples[year] * test_ratio))
+        test_set_size = int(len(classified_samples[year]) * test_ratio)
         test_indices = shuffled_indices[:test_set_size]
         train_indices = shuffled_indices[test_set_size:]
-        test.append(housing_data.iloc[test_indices])
-        train.append(housing_data.iloc[train_indices])
+        test = test.append(housing_data.iloc[test_indices], ignore_index=True)
+        train = train.append(housing_data.iloc[train_indices], ignore_index=True)
 
-    return test, train
-
-
-
-
+    return train, test
 
 
 def train_test_prep(housing_data, test_ratio):
     train_set, test_set = split_train_test(housing_data, test_ratio)
-    print(len(train_set), "training data +", len(test_set), "test data")
+    print(len(train_set), "training data +", len(test_set), "test data.", len(train_set) + len(test_set),
+          "data in total.")
 
     return train_set, test_set
+
+
+def data_inspective(housing_data, attributes, geo_price=False, corr=False):
+    housing = housing_data.copy()
+    # 地理位置与房价关系
+    if geo_price:
+        housing.plot(kind="scatter", x="Lng", y="Lat", alpha=0.009, c="totalPrice", cmap=plt.get_cmap("ocean"),
+                     colorbar=True)
+        plt.show()
+    # 各属性相关系数
+    if corr:
+        corr_matrix = housing.corr()
+        print(corr_matrix)
+    # 具体属性见相关性
+    scatter_matrix(housing[attributes], figsize=(24, 8), alpha=0.1)
+    plt.show()
+
+
+class DataFrameSelector(BaseEstimator, TransformerMixin):
+    def __init__(self, attribute_names):
+        self.attribute_names = attribute_names
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        return X[self.attribute_names].values
+
+
+def data_pipeline(data_set):
+    num_attributes = ["Lng", "Lat", "tradeTime", "square", "livingRoom", "drawingRoom", "kitchen", "bathRoom", "floor",
+                      "constructionTime", "ladderRatio", "elevator", "fiveYearsProperty", "subway", "district",
+                      "communityAverage"]
+    cat_attributes = ["buildingType", "renovationCondition", "buildingStructure"]
+    labels = ["totalPrice"]
+
+    num_pipeline = Pipeline([
+        ('selector', DataFrameSelector(num_attributes)),
+    ])
+    cat_pipeline = Pipeline([
+        ('selector', DataFrameSelector(cat_attributes)),
+        ("one_hot_encoder", OneHotEncoder())
+    ])
+    full_pipeline = FeatureUnion(transformer_list=[
+        ("num_pipeline", num_pipeline),
+        ("cat_pipeline", cat_pipeline)
+    ])
+
+    housing_prepared = full_pipeline.fit_transform(data_set)
+    housing_labels = data_set["totalPrice"].copy()
+    return housing_prepared, housing_labels
+
+
+def model_training(train_set_prepared):
+    lin_reg = LinearRegression()
+    lin_reg.fit(train_set_prepared, train_set_labels)
+    return lin_reg
+
 
 
 if __name__ == '__main__':
@@ -120,10 +176,26 @@ if __name__ == '__main__':
 
     housing_raw_data_frame = load_housing_data()
     housing_data_frame = data_prep(housing_raw_data_frame)
-    #data_statistics(housing_data_frame)
+    # data_statistics(housing_data_frame)
 
     train_set, test_set = train_test_prep(housing_data_frame, 0.15)
-    print(test_set.head())
+    # data_inspective(train_set, ["totalPrice", "tradeTime", "square", "livingRoom", "communityAverage"])
+
+    train_set_prepared, train_set_labels = data_pipeline(train_set)
+
+    model = model_training(train_set_prepared)
+
+    predictions = model.predict(train_set_prepared)
+    lin_mse = mean_squared_error(train_set_labels, predictions)
+    lin_rmse = np.sqrt(lin_mse)
+    print(lin_rmse)
+
+
+
+
+
+
+
 
     '''
     print(housing_raw_data_frame.head())
