@@ -8,7 +8,10 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import cross_val_score
 
 
 '''
@@ -158,13 +161,37 @@ def data_pipeline(data_set):
 
     housing_prepared = full_pipeline.fit_transform(data_set)
     housing_labels = data_set["totalPrice"].copy()
+    print("Data completely prepared!")
     return housing_prepared, housing_labels
 
 
-def model_training(train_set_prepared):
-    lin_reg = LinearRegression()
-    lin_reg.fit(train_set_prepared, train_set_labels)
-    return lin_reg
+def model_training(train_set_prepared, train_set_labels, model="LR"):
+    print("Model Training Started...")
+    if model == "LR":
+        lin_reg = LinearRegression()
+        lin_reg.fit(train_set_prepared, train_set_labels)
+        return lin_reg
+    if model == "DT":
+        tree_reg = DecisionTreeRegressor()
+        tree_reg.fit(train_set_prepared, train_set_labels)
+        return tree_reg
+    if model == "RF":
+        forest_reg = RandomForestRegressor()
+        forest_reg.fit(train_set_prepared, train_set_labels)
+        print("Model Training Completed!")
+        return forest_reg
+
+def rmse(predictions, labels):
+    print("Calculating Root Mean Squared Error...")
+    lin_mse = mean_squared_error(labels, predictions)
+    lin_rmse = np.sqrt(lin_mse)
+    return lin_rmse
+
+def cross_validation(model, data_set, labels):
+    print("Using Cross Validation to measure model performance...")
+    scores = cross_val_score(model, data_set, labels, scoring="neg_mean_squared_error", cv=10)
+    rmse_scores = np.sqrt(-scores)
+    return rmse_scores
 
 
 
@@ -183,18 +210,16 @@ if __name__ == '__main__':
 
     train_set_prepared, train_set_labels = data_pipeline(train_set)
 
-    model = model_training(train_set_prepared)
-
+    model = model_training(train_set_prepared, train_set_labels, model="RF")
     predictions = model.predict(train_set_prepared)
-    lin_mse = mean_squared_error(train_set_labels, predictions)
-    lin_rmse = np.sqrt(lin_mse)
-    print(lin_rmse)
 
+    lin_rmse = rmse(predictions, train_set_labels)
+    print("RMSE Scores:",lin_rmse)
 
-
-
-
-
+    cross_val_scores = cross_validation(model, train_set_prepared, train_set_labels)
+    print("Scores:", cross_val_scores)
+    print("Mean:", cross_val_scores.mean())
+    print("Standard Deviation:", cross_val_scores.std())
 
 
     '''
