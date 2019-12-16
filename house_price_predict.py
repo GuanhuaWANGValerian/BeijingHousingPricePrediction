@@ -1,4 +1,4 @@
-import os
+import os, time, pickle
 import pandas as pd
 from pandas.plotting import scatter_matrix
 import numpy as np
@@ -11,8 +11,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import cross_val_score
-
+from sklearn.model_selection import cross_val_score, GridSearchCV, RandomizedSearchCV
 
 '''
 url: the url which fetches the data
@@ -181,11 +180,13 @@ def model_training(train_set_prepared, train_set_labels, model="LR"):
         print("Model Training Completed!")
         return forest_reg
 
+
 def rmse(predictions, labels):
     print("Calculating Root Mean Squared Error...")
     lin_mse = mean_squared_error(labels, predictions)
     lin_rmse = np.sqrt(lin_mse)
     return lin_rmse
+
 
 def cross_validation(model, data_set, labels):
     print("Using Cross Validation to measure model performance...")
@@ -193,6 +194,34 @@ def cross_validation(model, data_set, labels):
     rmse_scores = np.sqrt(-scores)
     return rmse_scores
 
+
+def save_model(model, file):
+    output = open(file, 'wb')
+    pickle.dump(model, output)
+    output.close()
+
+
+def load_model(file):
+    model_file = open(file, 'rb')
+    model = pickle.load(model_file)
+    return model
+
+def hyperparam_tuning(method, model, train_set_prepared, train_set_labels):
+    if method == "GS":
+        print("Starting Grid Search to find the best parameters...")
+        param_grid = [
+            {'n_estimators': [3,10,30], 'max_features': [2,4,6,8]},
+            {'bootstrap': [False], 'n_estimators': [3,10], 'max_features': [2,3,4]}
+        ]
+        grid_search = GridSearchCV(model, param_grid, cv=3, scoring='neg_mean_squared_error', refit=False)
+        grid_search.fit(train_set_prepared, train_set_labels)
+        best_params = grid_search.best_params_
+        cvres = grid_search.cv_results_
+        for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
+            print(np.sqrt(-mean_score), params)
+        print("The best parameters are:")
+        print(best_params)
+        return best_params
 
 
 if __name__ == '__main__':
@@ -210,16 +239,25 @@ if __name__ == '__main__':
 
     train_set_prepared, train_set_labels = data_pipeline(train_set)
 
-    model = model_training(train_set_prepared, train_set_labels, model="RF")
+    '''
+    model_name = "DT"
+
+    model = model_training(train_set_prepared, train_set_labels, model_name)
     predictions = model.predict(train_set_prepared)
 
     lin_rmse = rmse(predictions, train_set_labels)
-    print("RMSE Scores:",lin_rmse)
+    print("RMSE Scores:", lin_rmse)
 
     cross_val_scores = cross_validation(model, train_set_prepared, train_set_labels)
     print("Scores:", cross_val_scores)
     print("Mean:", cross_val_scores.mean())
     print("Standard Deviation:", cross_val_scores.std())
+
+    save_model(model, "model/" + model_name + "_" + time.strftime("%Y%m%d", time.localtime()))
+    '''
+
+    model = load_model("model/RF_20191212")
+    best_params = hyperparam_tuning("GS", model, train_set_prepared, train_set_labels)
 
 
     '''
