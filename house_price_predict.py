@@ -206,12 +206,13 @@ def load_model(file):
     model = pickle.load(model_file)
     return model
 
+
 def hyperparam_tuning(method, model, train_set_prepared, train_set_labels):
     if method == "GS":
         print("Starting Grid Search to find the best parameters...")
         param_grid = [
-            {'n_estimators': [3,10,30], 'max_features': [2,4,6,8]},
-            {'bootstrap': [False], 'n_estimators': [3,10], 'max_features': [2,3,4]}
+            {'n_estimators': [3, 10, 30], 'max_features': [2, 4, 6, 8]},
+            {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]}
         ]
         grid_search = GridSearchCV(model, param_grid, cv=3, scoring='neg_mean_squared_error', refit=False)
         grid_search.fit(train_set_prepared, train_set_labels)
@@ -253,12 +254,11 @@ if __name__ == '__main__':
     print("Mean:", cross_val_scores.mean())
     print("Standard Deviation:", cross_val_scores.std())
 
-    save_model(model, "model/" + model_name + "_" + time.strftime("%Y%m%d", time.localtime()))
+    save_model(model, "model/" + model_name + "_" + time.strftime("%Y%m%d", time.localtime()) + ".model")
     '''
 
-    model = load_model("model/RF_20191212")
+    model = load_model("model/RF_20191212.model")
     best_params = hyperparam_tuning("GS", model, train_set_prepared, train_set_labels)
-
 
     '''
     print(housing_raw_data_frame.head())
