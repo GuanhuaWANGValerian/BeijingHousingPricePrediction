@@ -175,7 +175,7 @@ def model_training(train_set_prepared, train_set_labels, model="LR"):
         tree_reg.fit(train_set_prepared, train_set_labels)
         return tree_reg
     if model == "RF":
-        forest_reg = RandomForestRegressor()
+        forest_reg = RandomForestRegressor(max_features=8, n_estimators=30)
         forest_reg.fit(train_set_prepared, train_set_labels)
         print("Model Training Completed!")
         return forest_reg
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     train_set_prepared, train_set_labels = data_pipeline(train_set)
 
     '''
-    model_name = "DT"
+    model_name = "RF"
 
     model = model_training(train_set_prepared, train_set_labels, model_name)
     predictions = model.predict(train_set_prepared)
@@ -258,7 +258,11 @@ if __name__ == '__main__':
     '''
 
     model = load_model("model/RF_20191212.model")
-    best_params = hyperparam_tuning("GS", model, train_set_prepared, train_set_labels)
+    #best_params = hyperparam_tuning("GS", model, train_set_prepared, train_set_labels)
+    cross_val_scores = cross_validation(model, train_set_prepared, train_set_labels)
+    print("Scores:", cross_val_scores)
+    print("Mean:", cross_val_scores.mean())
+    print("Standard Deviation:", cross_val_scores.std())
 
     '''
     print(housing_raw_data_frame.head())
