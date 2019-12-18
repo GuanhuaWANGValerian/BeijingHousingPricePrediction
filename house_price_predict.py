@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import cross_val_score, GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import cross_val_score, GridSearchCV
 
 '''
 url: the url which fetches the data
@@ -49,6 +49,7 @@ def load_housing_data(housing_path="./data"):
 def data_prep(housing_raw_data_frame):
     housing_data_frame = housing_raw_data_frame.drop(labels=["url", "id", "Cid", "followers", "DOM", "price"],
                                                      axis=1)  # 去掉无用列
+    housing_data_frame = housing_data_frame[~housing_data_frame["buildingType"].lt(1)] # 处理sb的buildingType列的异常值(<1)
     # 将缺失值设置为某个值 （中位数）
     imputer = SimpleImputer(strategy="median")
     housing_data_numpy = imputer.fit_transform(housing_data_frame)
@@ -60,7 +61,6 @@ def data_prep(housing_raw_data_frame):
         if 500 > nullValueCount[index] > 0:
             housing_raw_data_frame.dropna(subset=[index])
     '''
-
     return housing_data_frame
 
 
@@ -144,7 +144,6 @@ def data_pipeline(data_set):
                       "constructionTime", "ladderRatio", "elevator", "fiveYearsProperty", "subway", "district",
                       "communityAverage"]
     cat_attributes = ["buildingType", "renovationCondition", "buildingStructure"]
-    labels = ["totalPrice"]
 
     num_pipeline = Pipeline([
         ('selector', DataFrameSelector(num_attributes)),
@@ -153,6 +152,7 @@ def data_pipeline(data_set):
         ('selector', DataFrameSelector(cat_attributes)),
         ("one_hot_encoder", OneHotEncoder())
     ])
+
     full_pipeline = FeatureUnion(transformer_list=[
         ("num_pipeline", num_pipeline),
         ("cat_pipeline", cat_pipeline)
@@ -199,6 +199,7 @@ def save_model(model, file):
     output = open(file, 'wb')
     pickle.dump(model, output)
     output.close()
+    print("Model Saved!")
 
 
 def load_model(file):
@@ -214,15 +215,14 @@ def hyperparam_tuning(method, model, train_set_prepared, train_set_labels):
             {'n_estimators': [3, 10, 30], 'max_features': [2, 4, 6, 8]},
             {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]}
         ]
-        grid_search = GridSearchCV(model, param_grid, cv=3, scoring='neg_mean_squared_error', refit=False)
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error', refit=True)
         grid_search.fit(train_set_prepared, train_set_labels)
         best_params = grid_search.best_params_
+        best_estimator = grid_search.best_estimator_
         cvres = grid_search.cv_results_
         for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
             print(np.sqrt(-mean_score), params)
-        print("The best parameters are:")
-        print(best_params)
-        return best_params
+        return best_params, best_estimator
 
 
 if __name__ == '__main__':
@@ -238,10 +238,11 @@ if __name__ == '__main__':
     train_set, test_set = train_test_prep(housing_data_frame, 0.15)
     # data_inspective(train_set, ["totalPrice", "tradeTime", "square", "livingRoom", "communityAverage"])
 
+    # 训练模型
+    '''
     train_set_prepared, train_set_labels = data_pipeline(train_set)
 
-    '''
-    model_name = "RF"
+    model_name = "DT"
 
     model = model_training(train_set_prepared, train_set_labels, model_name)
     predictions = model.predict(train_set_prepared)
@@ -257,12 +258,27 @@ if __name__ == '__main__':
     save_model(model, "model/" + model_name + "_" + time.strftime("%Y%m%d", time.localtime()) + ".model")
     '''
 
-    model = load_model("model/RF_20191212.model")
-    #best_params = hyperparam_tuning("GS", model, train_set_prepared, train_set_labels)
-    cross_val_scores = cross_validation(model, train_set_prepared, train_set_labels)
-    print("Scores:", cross_val_scores)
-    print("Mean:", cross_val_scores.mean())
-    print("Standard Deviation:", cross_val_scores.std())
+    # 载入模型
+
+    model = load_model("model/RF_20191218.model")
+    best_params, best_estimator = hyperparam_tuning("GS", model, train_set_prepared, train_set_labels)
+    model_gridSearch = best_estimator
+    save_model(model_gridSearch, "model/RF_GS_20191218.model")
+
+
+    # Final test
+    '''
+    train_set_prepared, train_set_labels = data_pipeline(train_set)
+    test_set_prepared, test_set_labels = data_pipeline(test_set)
+
+    final_predictions = model.predict(test_set_prepared)
+    final_mse = mean_squared_error(test_set_labels, final_predictions)
+    final_rmse = np.sqrt(final_mse)
+
+    print("The result for model final test:")
+    print("MSE:",final_mse)
+    print("RMSE",final_rmse)
+    '''
 
     '''
     print(housing_raw_data_frame.head())
