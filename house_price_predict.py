@@ -224,6 +224,33 @@ def hyperparam_tuning(method, model, train_set_prepared, train_set_labels):
             print(np.sqrt(-mean_score), params)
         return best_params, best_estimator
 
+def result_visual(final_predictions, labels):
+    final_predictions = final_predictions[:40000]
+    labels = labels[:40000]
+
+    fig, ax = plt.subplots()
+    plt.xlabel("Test Samples")
+    plt.ylabel("Pricing Range Group")
+
+    """Set interval for y label"""
+    yticks = range(0, 3200, 160)
+    ax.set_yticks(yticks)
+    xticks = range(0, 40000, 100)
+    ax.set_xticks(xticks)
+
+    """Set min and max value for axes"""
+    ax.set_ylim([0, 3200])
+    ax.set_xlim([0, 40000])
+
+    x = range(len(final_predictions))
+    plt.plot(x, final_predictions, color="red", label="Predictions")
+    plt.plot(x, labels, color="blue", label="Price")
+
+    """Open the grid"""
+    plt.grid(True)
+    plt.legend(bbox_to_anchor=(1.0, 1), loc=1, borderaxespad=0.)
+    plt.show()
+
 
 if __name__ == '__main__':
     # 显示所有列
@@ -261,14 +288,6 @@ if __name__ == '__main__':
     # 载入模型
 
     model = load_model("model/RF_GS_20191220.model")
-    predictions = model.predict(train_set_prepared)
-    lin_rmse = rmse(predictions, train_set_labels)
-    print("RMSE Scores:", lin_rmse)
-
-    cross_val_scores = cross_validation(model, train_set_prepared, train_set_labels)
-    print("Scores:", cross_val_scores)
-    print("Mean:", cross_val_scores.mean())
-    print("Standard Deviation:", cross_val_scores.std())
 
     # 利用Grid Search调参
     '''
@@ -279,8 +298,6 @@ if __name__ == '__main__':
 
 
     # Final test
-    '''
-    train_set_prepared, train_set_labels = data_pipeline(train_set)
     test_set_prepared, test_set_labels = data_pipeline(test_set)
 
     final_predictions = model.predict(test_set_prepared)
@@ -290,8 +307,8 @@ if __name__ == '__main__':
     print("The result for model final test:")
     print("MSE:",final_mse)
     print("RMSE",final_rmse)
-    '''
 
+    result_visual(final_predictions, test_set_labels)
     '''
     print(housing_raw_data_frame.head())
     print(housing_raw_data_frame.info())
