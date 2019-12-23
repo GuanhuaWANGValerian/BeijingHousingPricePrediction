@@ -238,10 +238,10 @@ if __name__ == '__main__':
     train_set, test_set = train_test_prep(housing_data_frame, 0.15)
     # data_inspective(train_set, ["totalPrice", "tradeTime", "square", "livingRoom", "communityAverage"])
 
+
+    train_set_prepared, train_set_labels = data_pipeline(train_set)
     # 训练模型
     '''
-    train_set_prepared, train_set_labels = data_pipeline(train_set)
-
     model_name = "DT"
 
     model = model_training(train_set_prepared, train_set_labels, model_name)
@@ -260,10 +260,22 @@ if __name__ == '__main__':
 
     # 载入模型
 
-    model = load_model("model/RF_20191218.model")
+    model = load_model("model/RF_GS_20191220.model")
+    predictions = model.predict(train_set_prepared)
+    lin_rmse = rmse(predictions, train_set_labels)
+    print("RMSE Scores:", lin_rmse)
+
+    cross_val_scores = cross_validation(model, train_set_prepared, train_set_labels)
+    print("Scores:", cross_val_scores)
+    print("Mean:", cross_val_scores.mean())
+    print("Standard Deviation:", cross_val_scores.std())
+
+    # 利用Grid Search调参
+    '''
     best_params, best_estimator = hyperparam_tuning("GS", model, train_set_prepared, train_set_labels)
     model_gridSearch = best_estimator
-    save_model(model_gridSearch, "model/RF_GS_20191218.model")
+    save_model(model_gridSearch, "model/RF_GS_20191220.model")
+    '''
 
 
     # Final test
