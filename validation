@@ -25,7 +25,6 @@ Standard Deviation: 7.906013649788801
 RandomForest + GridSearch():
 271000 training data + 47819 test data. 318819 data in total.
 RMSE Scores: 11.850247258986613
-Using Cross Validation to measure model performance...
 Scores: [28.97812599 26.02576206 28.63081231 21.76326837 19.43171446 10.84132641
  10.9481407  10.39469985  9.74835921 10.73636986]
 Mean: 17.749857920709342

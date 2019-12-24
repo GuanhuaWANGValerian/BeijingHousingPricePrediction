@@ -225,22 +225,22 @@ def hyperparam_tuning(method, model, train_set_prepared, train_set_labels):
         return best_params, best_estimator
 
 def result_visual(final_predictions, labels):
-    final_predictions = final_predictions[:40000]
-    labels = labels[:40000]
+    final_predictions = final_predictions[:100]
+    labels = labels[:100]
 
     fig, ax = plt.subplots()
     plt.xlabel("Test Samples")
     plt.ylabel("Pricing Range Group")
 
     """Set interval for y label"""
-    yticks = range(0, 3200, 160)
+    yticks = range(0, 1000, 50)
     ax.set_yticks(yticks)
-    xticks = range(0, 40000, 100)
+    xticks = range(0, 100, 1)
     ax.set_xticks(xticks)
 
     """Set min and max value for axes"""
-    ax.set_ylim([0, 3200])
-    ax.set_xlim([0, 40000])
+    ax.set_ylim([0, 1000])
+    ax.set_xlim([0, 100])
 
     x = range(len(final_predictions))
     plt.plot(x, final_predictions, color="red", label="Predictions")
